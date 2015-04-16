@@ -2,12 +2,11 @@ define([
     'jquery',
     'underscore',
     'backbone',
-    'backbone.radio',
     'backbone-forms',
     'requirejs-text!./Templates/tpl-filters.html',
     'requirejs-text!./Templates/tpl-CheckBoxes.html',
 
-], function ($, _, Backbone, Radio, BbForms, tpl, tplcheck) {
+], function ($, _, Backbone, BbForms, tpl, tplcheck) {
     'use strict';
     return Backbone.View.extend({
 
@@ -23,7 +22,7 @@ define([
         initialize: function (options) {
             this.filterContainer = options.filterContainer
             this.channel = options.channel;
-            this.radio = Radio.channel(this.channel);
+
             this.clientSide = options.clientSide;
             this.name = options.name || '';
             this.com = options.com;
@@ -54,7 +53,7 @@ define([
 
         getFilters: function () {
             var _this = this;
-
+            this.forms = [];
             var jqxhr = $.ajax({
                 url: _this.url,
                 data: JSON.stringify({
@@ -78,7 +77,7 @@ define([
 
         initFilters: function (data) {
             var form;
-            
+
             for (var key in data) {
                 form = this.initFilter(data[key]);
                 $('#' + this.filterContainer).append(form.el);
@@ -89,7 +88,7 @@ define([
                 }
                 $('#' + this.filterContainer + " input[type='checkbox']").on('click', this.clickedCheck);
 
-                $('#' + this.filterContainer +' #dateTimePicker').each(function () {
+                $('#' + this.filterContainer + ' #dateTimePicker').each(function () {
                     $(this).datetimepicker();
                 });
 
@@ -108,7 +107,7 @@ define([
             var template = tpl;
 
             if (fieldName == 'Status') classe = 'hidden';
-            
+
 
             var options = this.getValueOptions(dataRow);
 
@@ -126,11 +125,12 @@ define([
             }
 
             var schm = {
-                Column: { type: 'Hidden', title: dataRow['label'], value: fieldName },
+                Column: { name: 'Column', type: 'Hidden', title: dataRow['label'], value: fieldName },
+                ColumnType: { name: 'ColumnType', title:'',type: 'Hidden', value: type },
                 Operator: {
                     type: 'Select', title: dataRow['label'], options: this.getOpOptions(type), editorClass: 'form-control ' + classe,
                 },
-
+                
                 Value: {
                     type: this.getFieldType(type),
                     title: dataRow['label'],
@@ -139,8 +139,9 @@ define([
                 }
             }
 
-
+            console.log(schm);
             var Formdata = {
+                ColumnType: type,
                 Column: fieldName,
                 Operator: schm['Operator'].options[0]
             };
@@ -150,17 +151,19 @@ define([
                 schema: schm,
                 defaults: {
                     Column: fieldName,
+                    ColumnType: type,
                 }
             });
 
 
             var mod = new md();
+            console.log(mod);
 
             form = new BbForms({
                 template: _.template(template),
                 model: mod,
                 data: Formdata,
-                templateData: { filterName: dataRow['label'] }
+                templateData: { filterName: dataRow['label'],ColumnType:type }
             }).render();
 
             return form;
@@ -223,13 +226,13 @@ define([
             var operatorsOptions;
             switch (type) {
                 case "String":
-                    return operatorsOptions = [{label:'Is',val:'Is'}, {label:'Is not',val:'Is not'}, {label:'Contains',val:'Like'}];
+                    return operatorsOptions = [{ label: 'Is', val: 'Is' }, { label: 'Is not', val: 'Is not' }, { label: 'Contains', val: 'Contains' }, { label: 'IN', val: 'IN' }, ];
                     break;
                 case "DATETIME":
                     return operatorsOptions = ['<', '>', '=', '<>', '<=', '>='];
                     break;
-                case "Select": 
-                    return operatorsOptions= ['Is', 'Is not'];
+                case "Select":
+                    return operatorsOptions = ['Is', 'Is not'];
                     break;
                 case "Checkboxes":
                     return operatorsOptions = ['Checked'];
@@ -242,7 +245,7 @@ define([
         },
 
 
-      
+
 
 
 
@@ -267,38 +270,38 @@ define([
             }
         },
 
-        
 
 
 
-        update: function(){
-            var filters= [];
+
+        update: function () {
+            var filters = [];
             var currentForm, value;
             for (var i = 0; i < this.forms.length; i++) {
-                currentForm=this.forms[i];
-                if(!currentForm.validate() && currentForm.getValue().Value){
+                currentForm = this.forms[i];
+                if (!currentForm.validate() && currentForm.getValue().Value) {
 
                     value = currentForm.getValue();
 
                     filters.push(value);
-                    
+
 
 
                     currentForm.$el.find('input.filter').addClass('active');
-                }else{
+                } else {
                     currentForm.$el.find('input.filter').removeClass('active')
 
                 };
             };
-            this.radio.command(this.channel+':grid:update', { filters : filters });
 
-            if(this.clientSide){
+            this.interaction('filter', filters)
+            if (this.clientSide) {
                 this.clientFilter(filters)
             }
         },
 
 
-        
+
 
         reset: function () {
             $('#' + this.filterContainer).empty();
@@ -466,8 +469,18 @@ define([
 
         },
 
+        interaction: function (action, id) {
+            if (this.com) {
+                this.com.action(action, id);
+            } else {
+                this.action(action, id);
+            }
+        },
 
-
+        action: function (action, params) {
+            // Rien à faire
+            return;
+        },
 
     });
 });
