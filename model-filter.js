@@ -30,19 +30,15 @@ define([
             this.url = options.url;
 
             this.datas = {};
-            this.form;
-            this.datas;
 
             this.url = options.url + 'getFilters';
-
             this.forms = [];
-
-
-            this.forms = [];
-
+            if (options.filtersValues) {
+                this.filtersValues = options.filtersValues;
+            }
             // If filters are given we use them
             if (options.filters) {
-                this.initFilters(options.filters);
+                this.initFilters(options.filtersValues);
             }
             else {
                 // Otherwise initialized from AJAX call
@@ -56,9 +52,9 @@ define([
             this.forms = [];
             var jqxhr = $.ajax({
                 url: _this.url,
-                data: JSON.stringify({
+                data: {
                     FilterName: _this.name
-                }),
+                },
                 contentType: 'application/json',
                 type: 'GET',
                 context: this,
@@ -82,9 +78,11 @@ define([
                 form = this.initFilter(data[key]);
                 $('#' + this.filterContainer).append(form.el);
                 if (data[key].type == 'Checkboxes') {
-                    $('#' + this.filterContainer).find("input[type='checkbox']").each(function () {
-                        $(this).prop('checked', true);
-                    });
+                    if (!this.filtersValues || !this.filtersValues[data[key].name]) {
+                        $('#' + this.filterContainer).find("input[type='checkbox']").each(function () {
+                            $(this).prop('checked', true);
+                        });
+                    }
                 }
                 $('#' + this.filterContainer + " input[type='checkbox']").on('click', this.clickedCheck);
 
@@ -98,7 +96,6 @@ define([
 
 
         initFilter: function (dataRow) {
-            console.log(dataRow['name']);
             var form;
             var fieldName = dataRow['name'];
             var classe = '';
@@ -115,22 +112,22 @@ define([
                 editorClass += ' list-inline ';
                 options = dataRow['options'];
                 if (type == 'Checkboxes') {
-                    console.log('checkboxes');
                     options.splice(0, 0, { label: 'All', val: -1, checked: true });
                     template = tplcheck;
+                    editorClass = editorClass.replace('form-control', '');
                 }
                 else {
                     options.splice(0, 0, { label: ' ', val: -1 });
                 }
             }
-
+            console.log(' Column ' + fieldName + ':' + editorClass);
             var schm = {
                 Column: { name: 'Column', type: 'Hidden', title: dataRow['label'], value: fieldName },
-                ColumnType: { name: 'ColumnType', title:'',type: 'Hidden', value: type },
+                ColumnType: { name: 'ColumnType', title: '', type: 'Hidden', value: type },
                 Operator: {
                     type: 'Select', title: dataRow['label'], options: this.getOpOptions(type), editorClass: 'form-control ' + classe,
                 },
-                
+
                 Value: {
                     type: this.getFieldType(type),
                     title: dataRow['label'],
@@ -138,32 +135,31 @@ define([
                     options: this.getValueOptions(dataRow)
                 }
             }
-
-            console.log(schm);
-            var Formdata = {
-                ColumnType: type,
-                Column: fieldName,
-                Operator: schm['Operator'].options[0]
-            };
-
+            
+            var valeur = null;
+            var operatorValue = schm['Operator'].options[0].val;
+            if (this.filtersValues && this.filtersValues[fieldName]) {
+                valeur = this.filtersValues[fieldName].value;
+                operatorValue = this.filtersValues[fieldName].operatorValue;
+            }
 
             var md = Backbone.Model.extend({
                 schema: schm,
                 defaults: {
                     Column: fieldName,
                     ColumnType: type,
+                            // For FireFox, select first option
+                    Operator: operatorValue,
+                    Value:valeur
                 }
             });
 
-
             var mod = new md();
-            console.log(mod);
 
             form = new BbForms({
                 template: _.template(template),
-                model: mod,
-                data: Formdata,
-                templateData: { filterName: dataRow['label'],ColumnType:type }
+                model: mod,                
+                templateData: { filterName: dataRow['label'], ColumnType: type }
             }).render();
 
             return form;
@@ -226,16 +222,16 @@ define([
             var operatorsOptions;
             switch (type) {
                 case "String":
-                    return operatorsOptions = [{ label: 'Is', val: 'Is' }, { label: 'Is not', val: 'Is not' }, { label: 'Contains', val: 'Contains' }, { label: 'IN', val: 'IN' }, ];
+                    return operatorsOptions = [{ label: 'Equals', val: 'Is' }, { label: 'Does Not Equal', val: 'Is not' }, { label: 'Begins with', val: 'begins' }, { label: 'Does not Begin with', val: 'not begin' }, { label: 'Ends with', val: 'ends' }, { label: 'Does not end with', val: 'not end' }, { label: 'Contains', val: 'Contains' }, { label: 'Does not Contain', val: 'Not Contains' }, { label: 'IN', val: 'IN' }, ];
                     break;
                 case "DATETIME":
-                    return operatorsOptions = ['<', '>', '=', '<>', '<=', '>='];
+                    return operatorsOptions = [{ label: '<', val: '<' }, { label: '>', val: '>' }, { label: '=', val: '=' }, { label: '<>', val: '<>' }, { label: '<=', val: '<=' }, { label: '>=', val: '>=' }];
                     break;
                 case "Select":
-                    return operatorsOptions = ['Is', 'Is not'];
+                    return operatorsOptions = [{ label: 'Is', val: 'Is' }, { label: 'Is not', val: 'Is not' }];
                     break;
                 case "Checkboxes":
-                    return operatorsOptions = ['Checked'];
+                    return operatorsOptions = [{ label: 'Checked', val: 'Checked' }];
                     break;
                     break;
                 default:
@@ -275,18 +271,13 @@ define([
 
 
         update: function () {
-            var filters = [];
+            this.filters = [];
             var currentForm, value;
             for (var i = 0; i < this.forms.length; i++) {
                 currentForm = this.forms[i];
                 if (!currentForm.validate() && currentForm.getValue().Value) {
-
                     value = currentForm.getValue();
-
-                    filters.push(value);
-
-
-
+                    this.filters.push(value);
                     currentForm.$el.find('input.filter').addClass('active');
                 } else {
                     currentForm.$el.find('input.filter').removeClass('active')
@@ -294,9 +285,9 @@ define([
                 };
             };
 
-            this.interaction('filter', filters)
+            this.interaction('filter', this.filters)
             if (this.clientSide) {
-                this.clientFilter(filters)
+                this.clientFilter(this.filters)
             }
         },
 
@@ -305,6 +296,7 @@ define([
 
         reset: function () {
             $('#' + this.filterContainer).empty();
+            this.filtersValues = null;
             if (this.clientSide) {
                 this.initFilters(this.filters);
             }
