@@ -33,10 +33,12 @@ define([
 
             this.url = options.url + 'getFilters';
             this.forms = [];
-
+            if (options.filtersValues) {
+                this.filtersValues = options.filtersValues;
+            }
             // If filters are given we use them
             if (options.filters) {
-                this.initFilters(options.filters);
+                this.initFilters(options.filtersValues);
             }
             else {
                 // Otherwise initialized from AJAX call
@@ -76,9 +78,11 @@ define([
                 form = this.initFilter(data[key]);
                 $('#' + this.filterContainer).append(form.el);
                 if (data[key].type == 'Checkboxes') {
-                    $('#' + this.filterContainer).find("input[type='checkbox']").each(function () {
-                        $(this).prop('checked', true);
-                    });
+                    if (!this.filtersValues || !this.filtersValues[data[key].name]) {
+                        $('#' + this.filterContainer).find("input[type='checkbox']").each(function () {
+                            $(this).prop('checked', true);
+                        });
+                    }
                 }
                 $('#' + this.filterContainer + " input[type='checkbox']").on('click', this.clickedCheck);
 
@@ -132,14 +136,21 @@ define([
                 }
             }
             
-            
+            var valeur = null;
+            var operatorValue = schm['Operator'].options[0].val;
+            if (this.filtersValues && this.filtersValues[fieldName]) {
+                valeur = this.filtersValues[fieldName].value;
+                operatorValue = this.filtersValues[fieldName].operatorValue;
+            }
+
             var md = Backbone.Model.extend({
                 schema: schm,
                 defaults: {
                     Column: fieldName,
                     ColumnType: type,
                             // For FireFox, select first option
-                    Operator: schm['Operator'].options[0].val
+                    Operator: operatorValue,
+                    Value:valeur
                 }
             });
 
@@ -260,18 +271,13 @@ define([
 
 
         update: function () {
-            var filters = [];
+            this.filters = [];
             var currentForm, value;
             for (var i = 0; i < this.forms.length; i++) {
                 currentForm = this.forms[i];
                 if (!currentForm.validate() && currentForm.getValue().Value) {
-
                     value = currentForm.getValue();
-
-                    filters.push(value);
-
-
-
+                    this.filters.push(value);
                     currentForm.$el.find('input.filter').addClass('active');
                 } else {
                     currentForm.$el.find('input.filter').removeClass('active')
@@ -279,9 +285,9 @@ define([
                 };
             };
 
-            this.interaction('filter', filters)
+            this.interaction('filter', this.filters)
             if (this.clientSide) {
-                this.clientFilter(filters)
+                this.clientFilter(this.filters)
             }
         },
 
@@ -290,6 +296,7 @@ define([
 
         reset: function () {
             $('#' + this.filterContainer).empty();
+            this.filtersValues = null;
             if (this.clientSide) {
                 this.initFilters(this.filters);
             }
