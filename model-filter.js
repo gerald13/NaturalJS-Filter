@@ -120,7 +120,7 @@ define([
                     options.splice(0, 0, { label: ' ', val: -1 });
                 }
             }
-
+            console.log(' Column ' + fieldName + ':' + editorClass);
             var schm = {
                 Column: { name: 'Column', type: 'Hidden', title: dataRow['label'], value: fieldName },
                 ColumnType: { name: 'ColumnType', title: '', type: 'Hidden', value: type },
