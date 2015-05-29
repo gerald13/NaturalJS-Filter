@@ -120,7 +120,7 @@ define([
                     options.splice(0, 0, { label: ' ', val: -1 });
                 }
             }
-            console.log(' Column ' + fieldName + ':' + editorClass);
+            //console.log(' Column ' + fieldName + ':' + editorClass);
             var schm = {
                 Column: { name: 'Column', type: 'Hidden', title: dataRow['label'], value: fieldName },
                 ColumnType: { name: 'ColumnType', title: '', type: 'Hidden', value: type },
@@ -161,6 +161,7 @@ define([
                 model: mod,                
                 templateData: { filterName: dataRow['label'], ColumnType: type }
             }).render();
+            //console.log(form.model);
 
             return form;
         },
