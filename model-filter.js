@@ -96,44 +96,45 @@ define([
 
 
         initFilter: function (dataRow) {
-            var form;
+            var type = dataRow['type'];
             var fieldName = dataRow['name'];
+            var template = tpl;
+            
+            var form;
+            dataRow['editorClass'] = (dataRow['editorClass'] || '' ) +' form-control filter';
+            /*
             var classe = '';
             var editorClass = 'form-control filter';
-            var type = dataRow['type'];
-            var template = tpl;
+            
+            
 
             if (fieldName == 'Status') classe = 'hidden';
 
 
             var options = this.getValueOptions(dataRow);
-
+            */
             if (type == 'Select' || type == 'Checkboxes') {
-                editorClass += ' list-inline ';
-                options = dataRow['options'];
+                //
                 if (type == 'Checkboxes') {
-                    options.splice(0, 0, { label: 'All', val: -1, checked: true });
+                    dataRow['options'].splice(0, 0, { label: 'All', val: -1, checked: true });
                     template = tplcheck;
-                    editorClass = editorClass.replace('form-control', '');
+                    dataRow['editorClass'] = dataRow['editorClass'].split('form-control').join('');
+                    dataRow['editorClass'] += ' list-inline ';
                 }
                 else {
-                    options.splice(0, 0, { label: ' ', val: -1 });
+                    dataRow['options'].splice(0, 0, { label: ' ', val: -1 });
                 }
             }
             //console.log(' Column ' + fieldName + ':' + editorClass);
+            
             var schm = {
                 Column: { name: 'Column', type: 'Hidden', title: dataRow['label'], value: fieldName },
                 ColumnType: { name: 'ColumnType', title: '', type: 'Hidden', value: type },
                 Operator: {
-                    type: 'Select', title: dataRow['label'], options: this.getOpOptions(type), editorClass: 'form-control ' + classe,
+                    type: 'Select', title: dataRow['label'], options: this.getOpOptions(type), editorClass: 'form-control ' ,//+ classe,
                 },
 
-                Value: {
-                    type: this.getFieldType(type),
-                    title: dataRow['label'],
-                    editorClass: editorClass,
-                    options: this.getValueOptions(dataRow)
-                }
+                Value: dataRow
             }
             
             var valeur = null;
@@ -159,7 +160,7 @@ define([
             form = new BbForms({
                 template: _.template(template),
                 model: mod,                
-                templateData: { filterName: dataRow['label'], ColumnType: type }
+                templateData: { filterName: dataRow['title'], ColumnType: type }
             }).render();
             //console.log(form.model);
 
@@ -198,7 +199,7 @@ define([
 
         },
 
-
+        /*
         getValueOptions: function (DataRow) {
             var valueOptions;
             switch (DataRow['type']) {
@@ -216,13 +217,13 @@ define([
                     break;
             }
         },
-
+        */
 
 
         getOpOptions: function (type) {
             var operatorsOptions;
             switch (type) {
-                case "String":
+                case "Text":case "AutocompTreeEditor":
                     return operatorsOptions = [{ label: 'Equals', val: 'Is' }, { label: 'Does Not Equal', val: 'Is not' }, { label: 'Begins with', val: 'begins' }, { label: 'Does not Begin with', val: 'not begin' }, { label: 'Ends with', val: 'ends' }, { label: 'Does not end with', val: 'not end' }, { label: 'Contains', val: 'Contains' }, { label: 'Does not Contain', val: 'Not Contains' }, { label: 'IN', val: 'IN' }, ];
                     break;
                 case "DATETIME":
@@ -236,7 +237,7 @@ define([
                     break;
                     break;
                 default:
-                    return operatorsOptions = ['<', '>', '=', '<>', '<=', '>='];
+                    return operatorsOptions = ['<', '>', '=', '<>', '<=', '>=','IN'];
                     break;
             }
         },
@@ -245,7 +246,7 @@ define([
 
 
 
-
+        /*
         getFieldType: function (type) {
             var typeField;
             switch (type) {
@@ -265,7 +266,7 @@ define([
                     return typeField = "Number";
                     break;
             }
-        },
+        },*/
 
 
 
