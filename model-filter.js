@@ -223,7 +223,7 @@ define([
         getOpOptions: function (type) {
             var operatorsOptions;
             switch (type) {
-                case "Text":case "AutocompTreeEditor":
+                case "Text": case "AutocompTreeEditor": case "AutocompleteEditor":
                     return operatorsOptions = [{ label: 'Equals', val: 'Is' }, { label: 'Does Not Equal', val: 'Is not' }, { label: 'Begins with', val: 'begins' }, { label: 'Does not Begin with', val: 'not begin' }, { label: 'Ends with', val: 'ends' }, { label: 'Does not end with', val: 'not end' }, { label: 'Contains', val: 'Contains' }, { label: 'Does not Contain', val: 'Not Contains' }, { label: 'IN', val: 'IN' }, ];
                     break;
                 case "DATETIME":
