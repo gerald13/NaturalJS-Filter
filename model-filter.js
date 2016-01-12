@@ -14,7 +14,16 @@ define([
         events: {
             "click input": 'clickedCheck'
         },
-
+        ToggleFilter: null,
+        filterContainer: null,
+        channel: null,
+        clientSide: null,
+        name: null,
+        com: null,
+        url: null,
+        datas: null,
+        forms: [],
+        filtersValues: null,
         /*=====================================
         =            Filter Module            =
         =====================================*/
@@ -44,6 +53,7 @@ define([
                 // Otherwise initialized from AJAX call
                 this.getFilters();
             }
+            this.ToggleFilter = options.ToggleFilter;
         },
 
 
@@ -77,6 +87,7 @@ define([
             for (var key in data) {
                 form = this.initFilter(data[key]);
                 $('#' + this.filterContainer).append(form.el);
+
                 if (data[key].type == 'Checkboxes') {
                     if (!this.filtersValues || !this.filtersValues[data[key].name]) {
                         $('#' + this.filterContainer).find("input[type='checkbox']").each(function () {
@@ -92,6 +103,37 @@ define([
 
                 this.forms.push(form);
             };
+            if (this.ToggleFilter) {
+                for (var i = 0; i < this.forms.length; i++) {
+                    
+                    if (this.forms[i].model.get('Value') != null || this.forms[i].model.get('Value') == 0  ) {
+                        if (
+                            (this.forms[i].model.get('ColumnType') == 'Select' && this.forms[i].model.get('Value') == '-1')
+                            || (this.forms[i].model.get('ColumnType') == 'Checkboxes' && this.forms[i].model.get('Value')[0] == '-1')
+                            || (this.forms[i].model.get('Value') != '0' && this.forms[i].model.get('Value') == '')
+                            ) {
+                            // pas de saisie
+                        }
+                        else {
+                            console.log('Filtre non vide :' + this.forms[i].model.get('Column'));
+                            $('.filter-form-' + this.forms[i].model.get('Column') + ' .filter').addClass(this.ToggleFilter.classBefore);
+                            var toggleInfo = {
+                                columnName: this.forms[i].model.get('Column'),
+                                classAfter: this.ToggleFilter.classAfter,
+                                classBefore: this.ToggleFilter.classBefore,
+                            }
+                            setTimeout(function (toggleInfo) {
+                                $('.filter-form-' + toggleInfo.columnName + ' .filter').removeClass(toggleInfo.classBefore);
+                                $('.filter-form-' + toggleInfo.columnName + ' .filter').addClass(toggleInfo.classAfter);
+                                //}
+                            }, 0, toggleInfo);
+                        }
+                    }
+                    
+                }
+                
+
+            }
         },
 
 
@@ -99,20 +141,10 @@ define([
             var type = dataRow['type'];
             var fieldName = dataRow['name'];
             var template = tpl;
-            
+            dataRow['name'] = 'Value';
             var form;
-            dataRow['editorClass'] = (dataRow['editorClass'] || '' ) +' form-control filter';
-            /*
-            var classe = '';
-            var editorClass = 'form-control filter';
-            
-            
+            dataRow['editorClass'] = (dataRow['editorClass'] || '') + ' form-control filter';
 
-            if (fieldName == 'Status') classe = 'hidden';
-
-
-            var options = this.getValueOptions(dataRow);
-            */
             if (type == 'Select' || type == 'Checkboxes') {
                 //
                 if (type == 'Checkboxes') {
@@ -120,23 +152,24 @@ define([
                     template = tplcheck;
                     dataRow['editorClass'] = dataRow['editorClass'].split('form-control').join('');
                     dataRow['editorClass'] += ' list-inline ';
+                    // Adding name of field in class
+                    //dataRow['editorClass'] += ' filter-' + fieldName;
                 }
                 else {
                     dataRow['options'].splice(0, 0, { label: ' ', val: -1 });
                 }
             }
-            //console.log(' Column ' + fieldName + ':' + editorClass);
-            
+
             var schm = {
                 Column: { name: 'Column', type: 'Hidden', title: dataRow['label'], value: fieldName },
                 ColumnType: { name: 'ColumnType', title: '', type: 'Hidden', value: type },
                 Operator: {
-                    type: 'Select', title: dataRow['label'], options: this.getOpOptions(type), editorClass: 'form-control ' ,//+ classe,
+                    type: 'Select', title: dataRow['label'], options: this.getOpOptions(type), editorClass: 'form-control ',//+ classe,
                 },
 
                 Value: dataRow
             }
-            
+
             var valeur = null;
             var operatorValue = schm['Operator'].options[0].val;
             if (this.filtersValues && this.filtersValues[fieldName]) {
@@ -149,19 +182,20 @@ define([
                 defaults: {
                     Column: fieldName,
                     ColumnType: type,
-                            // For FireFox, select first option
+                    // For FireFox, select first option
                     Operator: operatorValue,
-                    Value:valeur
+                    Value: valeur
                 }
             });
 
             var mod = new md();
-
+            mod.set('Value',valeur);
             form = new BbForms({
                 template: _.template(template),
-                model: mod,                
-                templateData: { filterName: dataRow['title'], ColumnType: type }
+                model: mod,
+                templateData: { filterName: dataRow['title'], ColumnType: type, fieldname: fieldName }
             }).render();
+
             //console.log(form.model);
 
             return form;
@@ -199,32 +233,12 @@ define([
 
         },
 
-        /*
-        getValueOptions: function (DataRow) {
-            var valueOptions;
-            switch (DataRow['type']) {
-                case "Select": case 'Checkboxes':
-                    return DataRow['options']
-                    break;
-                case "DATETIME":
-                    return valueOptions = [{
-                        dateFormat: 'd/m/yyyy',
-                        defaultValue: new Date().getDate() + "/" + (new Date().getMonth() + 1) + "/" + new Date().getFullYear()
-                    }];
-                    break;
-                default:
-                    return valueOptions = '';
-                    break;
-            }
-        },
-        */
-
 
         getOpOptions: function (type) {
             var operatorsOptions;
             switch (type) {
                 case "Text": case "AutocompTreeEditor": case "AutocompleteEditor":
-                    return operatorsOptions = [{ label: 'Equals', val: 'Is' }, { label: 'Does Not Equal', val: 'Is not' }, { label: 'Begins with', val: 'begins' }, { label: 'Does not Begin with', val: 'not begin' }, { label: 'Ends with', val: 'ends' }, { label: 'Does not end with', val: 'not end' }, { label: 'Contains', val: 'Contains' }, { label: 'Does not Contain', val: 'Not Contains' }, { label: 'IN', val: 'IN' }, ];
+                    return operatorsOptions = [{ label: 'Equals', val: 'Is' }, { label: 'Does Not Equal', val: 'Is not' }, { label: 'Begins with', val: 'begins' }, { label: 'Does not Begin with', val: 'not begin' }, { label: 'Ends with', val: 'ends' }, { label: 'Does not end with', val: 'not end' }, { label: 'Contains', val: 'Contains' }, { label: 'Does not Contain', val: 'Not Contains' }, { label: 'In', val: 'IN' }, ];
                     break;
                 case "DATETIME":
                     return operatorsOptions = [{ label: '<', val: '<' }, { label: '>', val: '>' }, { label: '=', val: '=' }, { label: '<>', val: '<>' }, { label: '<=', val: '<=' }, { label: '>=', val: '>=' }];
@@ -237,56 +251,30 @@ define([
                     break;
                     break;
                 default:
-                    return operatorsOptions = ['<', '>', '=', '<>', '<=', '>=','IN'];
+                    return operatorsOptions = ['<', '>', '=', '<>', '<=', '>=', 'IN'];
                     break;
             }
         },
-
-
-
-
-
-        /*
-        getFieldType: function (type) {
-            var typeField;
-            switch (type) {
-                case "String":
-                    return typeField = "Text";
-                    break;
-                case "DATETIME":
-                    return typeField = "BackboneDatepicker"; //DateTime
-                    break;
-                case "Select":
-                    return typeField = "Select";
-                    break;
-                case "Checkboxes":
-                    return typeField = "Checkboxes";
-                    break;
-                default:
-                    return typeField = "Number";
-                    break;
-            }
-        },*/
-
-
-
-
 
         update: function () {
             this.filters = [];
             var currentForm, value;
             for (var i = 0; i < this.forms.length; i++) {
                 currentForm = this.forms[i];
-                if (!currentForm.validate() && currentForm.getValue().Value) {
+                var Validation = currentForm.validate() ;
+                //console.log('*********** Validation**********',Validation) ;
+                if (!Validation && (!currentForm.getValue().Value == '0' && currentForm.getValue().Value != null) ) {
                     value = currentForm.getValue();
                     this.filters.push(value);
+                    console.log('Add value ', value, this.filters);
                     currentForm.$el.find('input.filter').addClass('active');
                 } else {
                     currentForm.$el.find('input.filter').removeClass('active')
 
                 };
             };
-
+            //console.log( this.filters);
+            //console.log('fILTERS ***********************', this.filters);
             this.interaction('filter', this.filters)
             if (this.clientSide) {
                 this.clientFilter(this.filters)
