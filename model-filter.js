@@ -3,13 +3,13 @@ define([
     'underscore',
     'backbone',
     'backbone_forms',
+    'moment',
     'requirejs-text!./Templates/tpl-filters.html',
     'requirejs-text!./Templates/tpl-CheckBoxes.html',
-
-], function ($, _, Backbone, BbForms, tpl, tplcheck) {
+    'requirejs-text!./Templates/tpl-filters-added.html',
+], function ($, _, Backbone, BbForms, moment, tpl, tplcheck,tplAdded) {
     'use strict';
     return Backbone.View.extend({
-
 
         events: {
             "click input": 'clickedCheck'
@@ -29,15 +29,19 @@ define([
         =====================================*/
 
         initialize: function (options) {
-            this.filterContainer = options.filterContainer
+
+            if (typeof(options.filterContainer) === 'string'){
+                this.filterContainer = $('#' + options.filterContainer);
+            } else {
+                this.filterContainer =options.filterContainer;
+            }
             this.channel = options.channel;
 
             this.clientSide = options.clientSide;
             this.name = options.name || '';
             this.com = options.com;
-
+            this.typeObj = options.typeObj;
             this.url = options.url;
-
             this.datas = {};
 
             this.url = options.url + 'getFilters';
@@ -46,16 +50,25 @@ define([
                 this.filtersValues = options.filtersValues;
             }
             // If filters are given we use them
-            if (options.filters) {
-                this.initFilters(options.filtersValues);
-            }
-            else {
-                // Otherwise initialized from AJAX call
-                this.getFilters();
+            if(!options.custom){
+                if (options.filters) {
+                    this.filters = options.filters;
+                    if (options.filtersValues) this.initFilters(options.filtersValues);
+                    else this.initFilters(options.filters);
+                }
+                else {
+                    // Otherwise initialized from AJAX call
+                    this.getFilters();
+                }
             }
             this.ToggleFilter = options.ToggleFilter;
-        },
 
+            // If filters are given we use them
+            this.criterias = {};
+            if (options.filterLoaded){
+                this.filterLoaded = options.filterLoaded ;
+            }
+        },
 
         getFilters: function () {
             var _this = this;
@@ -63,7 +76,8 @@ define([
             var jqxhr = $.ajax({
                 url: _this.url,
                 data: {
-                    FilterName: _this.name
+                'FilterName': _this.name,
+                'typeObj' : _this.typeObj,
                 },
                 contentType: 'application/json',
                 type: 'GET',
@@ -74,10 +88,9 @@ define([
             }).fail(function (msg) {
                 console.log(msg);
             });
+        },
 
-
-
-
+        filterLoaded : function(){
 
         },
 
@@ -86,22 +99,23 @@ define([
 
             for (var key in data) {
                 form = this.initFilter(data[key]);
-                $('#' + this.filterContainer).append(form.el);
+                this.filterContainer.append(form.el);
 
                 if (data[key].type == 'Checkboxes') {
                     if (!this.filtersValues || !this.filtersValues[data[key].name]) {
-                        $('#' + this.filterContainer).find("input[type='checkbox']").each(function () {
+                        this.filterContainer.find("input[type='checkbox']").each(function () {
                             $(this).prop('checked', true);
                         });
                     }
                 }
-                $('#' + this.filterContainer + " input[type='checkbox']").on('click', this.clickedCheck);
+                this.filterContainer.find("input[type='checkbox']").on('click', this.clickedCheck);
 
-                $('#' + this.filterContainer + ' #dateTimePicker').each(function () {
+                this.filterContainer.find("#dateTimePicker").each(function () {
                     $(this).datetimepicker();
                 });
 
                 this.forms.push(form);
+                this.filterLoaded();
             };
             if (this.ToggleFilter) {
                 for (var i = 0; i < this.forms.length; i++) {
@@ -129,45 +143,89 @@ define([
                             }, 0, toggleInfo);
                         }
                     }
-                    
                 }
                 
 
             }
         },
 
+        addFilter: function(data) {
+              var _this = this;
+              var form;
+              var index = 0;
+              for (var key in data) {
+                index++;
+                form = this.initFilter(data[key], true);
+                this.filterContainer.append(form.el);
 
-        initFilter: function (dataRow) {
+                $(form.el).find('select').focus();
+                if (data[key].type == 'Checkboxes') {
+                  this.filterContainer.find('input[type="checkbox"]').each(function() {
+                    $(this).prop('checked', true);
+                  });
+                }
+
+                form.$el.find('button#removeFilter').on('click', function() {
+                  _this.filterContainer.find(form.el).remove();
+                  var i = _this.forms.indexOf(form);
+                  if (i > -1) {
+                      _this.forms.splice(i, 1);
+                  }
+                  return;
+                });
+
+                this.forms.push(form);
+              };
+            },
+
+        initFilter: function (dataRow,added) {
+            var form;
             var type = dataRow['type'];
             var fieldName = dataRow['name'];
             var template = tpl;
-            dataRow['name'] = 'Value';
-            var form;
-            dataRow['editorClass'] = (dataRow['editorClass'] || '') + ' form-control filter';
+            var template = (added) ? tplAdded : tpl;
+            var options = this.getValueOptions(dataRow);
 
-            if (type == 'Select' || type == 'Checkboxes') {
-                //
+            if (dataRow.options) var operators = dataRow.options.operators;
+            var editorClass = (dataRow['editorClass'] || '') + ' form-control filter';
+            //dataRow['name'] = 'Value';
+            //dataRow['editorClass'] = (dataRow['editorClass'] || '') + ' form-control filter';
+
+            if (type == 'Select' || type == 'Checkboxes' || type == 'AutocompTreeEditor') {
+                editorClass += ' list-inline ';
+                options = dataRow['options'];
+
                 if (type == 'Checkboxes') {
-                    dataRow['options'].splice(0, 0, { label: 'All', val: -1, checked: true });
+                    //dataRow['options'].splice(0, 0, { label: 'All', val: -1, checked: true });
+                    options.splice(0, 0, { label: 'All', val: -1, checked: true });
                     template = tplcheck;
-                    dataRow['editorClass'] = dataRow['editorClass'].split('form-control').join('');
-                    dataRow['editorClass'] += ' list-inline ';
+                    //dataRow['editorClass'] = dataRow['editorClass'].split('form-control').join('');
+                    //dataRow['editorClass'] += ' list-inline ';
                     // Adding name of field in class
                     //dataRow['editorClass'] += ' filter-' + fieldName;
                 }
-                else {
+                else if (type == 'Select'){
                     dataRow['options'].splice(0, 0, { label: ' ', val: -1 });
                 }
             }
+            
+            editorClass += ' ' + fieldName;
 
             var schm = {
                 Column: { name: 'Column', type: 'Hidden', title: dataRow['label'], value: fieldName },
                 ColumnType: { name: 'ColumnType', title: '', type: 'Hidden', value: type },
                 Operator: {
-                    type: 'Select', title: dataRow['label'], options: this.getOpOptions(type), editorClass: 'form-control ',//+ classe,
+                    type: 'Select', title: dataRow['label'], options: operators || this.getOpOptions(type), editorClass: 'form-control ',//+ classe,
                 },
 
-                Value: dataRow
+                //Value: dataRow
+                Value: {
+                  type: this.getFieldType(type),
+                  title: dataRow['label'],
+                  editorClass: editorClass,
+                  options: this.getValueOptions(dataRow),
+                  validators: []
+                }
             }
 
             var valeur = null;
@@ -177,36 +235,38 @@ define([
                 operatorValue = this.filtersValues[fieldName].operatorValue;
             }
 
+            var Formdata = {
+                ColumnType: type,
+                Column: fieldName,
+                Operator: schm['Operator'].options[0]
+            };
+
             var md = Backbone.Model.extend({
                 schema: schm,
                 defaults: {
                     Column: fieldName,
                     ColumnType: type,
                     // For FireFox, select first option
-                    Operator: operatorValue,
-                    Value: valeur
+                    //Operator: operatorValue,
+                    //Value: valeur
                 }
             });
 
             var mod = new md();
-            mod.set('Value',valeur);
+            //mod.set('Value',valeur);
             form = new BbForms({
                 template: _.template(template),
                 model: mod,
-                templateData: { filterName: dataRow['title'], ColumnType: type, fieldname: fieldName }
+                data: Formdata,
+                templateData: { filterName: dataRow['label'], ColumnType: type, fieldname: fieldName }
             }).render();
 
             //console.log(form.model);
-
             return form;
         },
 
-
         changeInput: function (options) {
         },
-
-
-
 
         clickedCheck: function (e) {
             // Keep the new check value
@@ -226,13 +286,35 @@ define([
                     $(this).prop('checked', IsChecked);
                 });
             }
-
         },
 
         displayFilter: function () {
-
         },
 
+        getValueOptions: function (DataRow) {
+
+          var valueOptions;
+          switch (DataRow['type']) {
+            case "Select": case 'Checkboxes':  
+              return DataRow['options']
+              break;
+            case 'AutocompTreeEditor':
+              return DataRow['options']
+              break;
+            case 'AutocompleteEditor':
+              return DataRow['options']
+              break;
+            case "DATETIME":
+              return valueOptions = [{
+                dateFormat: 'd/m/yyyy',
+                defaultValue: new Date().getDate() + "/" + (new Date().getMonth() + 1) + "/" + new Date().getFullYear()
+              }];
+              break;
+            default:
+              return valueOptions = '';
+              break;
+          }
+        },
 
         getOpOptions: function (type) {
             var operatorsOptions;
@@ -241,7 +323,8 @@ define([
                     return operatorsOptions = [{ label: 'Equals', val: 'Is' }, { label: 'Does Not Equal', val: 'Is not' }, { label: 'Begins with', val: 'begins' }, { label: 'Does not Begin with', val: 'not begin' }, { label: 'Ends with', val: 'ends' }, { label: 'Does not end with', val: 'not end' }, { label: 'Contains', val: 'Contains' }, { label: 'Does not Contain', val: 'Not Contains' }, { label: 'In', val: 'IN' }, ];
                     break;
                 case "DATETIME":
-                    return operatorsOptions = [{ label: '<', val: '<' }, { label: '>', val: '>' }, { label: '=', val: '=' }, { label: '<>', val: '<>' }, { label: '<=', val: '<=' }, { label: '>=', val: '>=' }];
+                    //return operatorsOptions = [{ label: '<', val: '<' }, { label: '>', val: '>' }, { label: '=', val: '=' }, { label: '<>', val: '<>' }, { label: '<=', val: '<=' }, { label: '>=', val: '>=' }];
+                    return operatorsOptions = ['<', '>', '=', '<>', '<=', '>='];
                     break;
                 case "Select":
                     return operatorsOptions = [{ label: 'Is', val: 'Is' }, { label: 'Is not', val: 'Is not' }];
@@ -256,44 +339,83 @@ define([
             }
         },
 
+        getFieldType: function (type) {
+            var typeField;
+              switch (type) {
+                case "Text":
+                  return typeField = "Text";
+                  break;
+                case "DateTimePicker":
+                  return typeField = "DateTimePicker"; 
+                  break;
+                case "Select":
+                  return typeField = "Select";
+                  break;
+                case "AutocompleteEditor":
+                  return typeField = "AutocompleteEditor";
+                  break;
+                case "AutocompTreeEditor":
+                  return typeField = "AutocompTreeEditor";
+                  break;
+                case "Checkboxes":
+                  return typeField = "Checkboxes";
+                  break;
+                case "LatitudeEditor":
+                  return typeField = "LatitudeEditor";
+                  break;  
+                case "LongitudeEditor":
+                  return typeField = "LongitudeEditor";
+                  break;  
+                default:
+                  return typeField = "Number";
+                  break;
+              }
+        },
+
         update: function () {
             this.filters = [];
             var currentForm, value;
             for (var i = 0; i < this.forms.length; i++) {
                 currentForm = this.forms[i];
+                var type = typeof currentForm.getValue().Value;
                 var Validation = currentForm.validate() ;
                 //console.log('*********** Validation**********',Validation) ;
-                if (!Validation && (!currentForm.getValue().Value == '0' && currentForm.getValue().Value != null) ) {
+                //if (!Validation && (currentForm.getValue().Value == '0' && currentForm.getValue().Value != null) ) {
+                if (!currentForm.validate() && (currentForm.getValue().Value)) {
                     value = currentForm.getValue();
                     this.filters.push(value);
-                    console.log('Add value ', value, this.filters);
+                    //console.log('Add value ', value, this.filters);
                     currentForm.$el.find('input.filter').addClass('active');
                 } else {
                     currentForm.$el.find('input.filter').removeClass('active')
-
                 };
             };
+            this.criterias = this.filters;
             //console.log( this.filters);
             //console.log('fILTERS ***********************', this.filters);
-            this.interaction('filter', this.filters)
+/*            this.interaction('filter', this.filters)
             if (this.clientSide) {
                 this.clientFilter(this.filters)
+            }*/
+            if (this.clientSide != null) {
+                this.clientFilter(this.filters);
+              }else{
+                this.interaction('filter', this.filters);
             }
+            return this.filters;
         },
 
-
-
-
         reset: function () {
-            $('#' + this.filterContainer).empty();
+            this.filterContainer.empty();
             this.filtersValues = null;
-            if (this.clientSide) {
+            if (this.clientSide != null) {
                 this.initFilters(this.filters);
             }
             else {
                 // Otherwise initialized from AJAX call
                 this.getFilters();
             }
+            this.update();
         },
 
 
@@ -463,6 +585,14 @@ define([
             // Rien à faire
             return;
         },
+
+        updateQuery : function(e){
+          if (e.keyCode === 13) {
+            e.preventDefault();
+            this.update();
+            return false;
+            }
+        }
 
     });
 });
