@@ -29,12 +29,8 @@ define([
         =====================================*/
 
         initialize: function (options) {
-
-            if (typeof(options.filterContainer) === 'string'){
-                this.filterContainer = $('#' + options.filterContainer);
-            } else {
-                this.filterContainer =options.filterContainer;
-            }
+            this.filterContainer = options.filterContainer;
+            
             this.channel = options.channel;
 
             this.clientSide = options.clientSide;
@@ -69,7 +65,14 @@ define([
                 this.filterLoaded = options.filterLoaded ;
             }
         },
+        getContainer: function() {
+            if (typeof (this.filterContainer) === 'string') {
+                return $('#' + this.filterContainer);
+            } else {
+                return this.filterContainer ;
+            }
 
+        },
         getFilters: function () {
             var _this = this;
             this.forms = [];
@@ -99,18 +102,18 @@ define([
 
             for (var key in data) {
                 form = this.initFilter(data[key]);
-                this.filterContainer.append(form.el);
+                this.getContainer().append(form.el);
 
                 if (data[key].type == 'Checkboxes') {
                     if (!this.filtersValues || !this.filtersValues[data[key].name]) {
-                        this.filterContainer.find("input[type='checkbox']").each(function () {
+                        this.getContainer().find("input[type='checkbox']").each(function () {
                             $(this).prop('checked', true);
                         });
                     }
                 }
-                this.filterContainer.find("input[type='checkbox']").on('click', this.clickedCheck);
+                this.getContainer().find("input[type='checkbox']").on('click', this.clickedCheck);
 
-                this.filterContainer.find("#dateTimePicker").each(function () {
+                this.getContainer().find("#dateTimePicker").each(function () {
                     $(this).datetimepicker();
                 });
 
@@ -156,17 +159,17 @@ define([
               for (var key in data) {
                 index++;
                 form = this.initFilter(data[key], true);
-                this.filterContainer.append(form.el);
+                this.getContainer().append(form.el);
 
                 $(form.el).find('select').focus();
                 if (data[key].type == 'Checkboxes') {
-                  this.filterContainer.find('input[type="checkbox"]').each(function() {
+                    this.getContainer().find('input[type="checkbox"]').each(function () {
                     $(this).prop('checked', true);
                   });
                 }
 
                 form.$el.find('button#removeFilter').on('click', function() {
-                  _this.filterContainer.find(form.el).remove();
+                    _this.getContainer().find(form.el).remove();
                   var i = _this.forms.indexOf(form);
                   if (i > -1) {
                       _this.forms.splice(i, 1);
@@ -188,21 +191,15 @@ define([
 
             if (dataRow.options) var operators = dataRow.options.operators;
             var editorClass = (dataRow['editorClass'] || '') + ' form-control filter';
-            //dataRow['name'] = 'Value';
-            //dataRow['editorClass'] = (dataRow['editorClass'] || '') + ' form-control filter';
 
             if (type == 'Select' || type == 'Checkboxes' || type == 'AutocompTreeEditor') {
                 editorClass += ' list-inline ';
                 options = dataRow['options'];
 
                 if (type == 'Checkboxes') {
-                    //dataRow['options'].splice(0, 0, { label: 'All', val: -1, checked: true });
                     options.splice(0, 0, { label: 'All', val: -1, checked: true });
                     template = tplcheck;
-                    //dataRow['editorClass'] = dataRow['editorClass'].split('form-control').join('');
-                    //dataRow['editorClass'] += ' list-inline ';
-                    // Adding name of field in class
-                    //dataRow['editorClass'] += ' filter-' + fieldName;
+                    editorClass = editorClass.split('form-control').join('');
                 }
                 else if (type == 'Select'){
                     dataRow['options'].splice(0, 0, { label: ' ', val: -1 });
@@ -247,8 +244,8 @@ define([
                     Column: fieldName,
                     ColumnType: type,
                     // For FireFox, select first option
-                    //Operator: operatorValue,
-                    //Value: valeur
+                    Operator: operatorValue,
+                    Value: valeur
                 }
             });
 
@@ -258,7 +255,7 @@ define([
                 template: _.template(template),
                 model: mod,
                 data: Formdata,
-                templateData: { filterName: dataRow['label'], ColumnType: type, fieldname: fieldName }
+                templateData: { filterName: dataRow['title'], ColumnType: type, fieldname: fieldName }
             }).render();
 
             //console.log(form.model);
@@ -271,7 +268,7 @@ define([
         clickedCheck: function (e) {
             // Keep the new check value
             var IsChecked = e.target.checked;
-            if (e.target.value > 0) {
+            if (e.target.value != -1) {
                 //'Not checkall', We change the checkall if new target value is uncheked
                 $(this).parent().parent().find('input:checkbox').each(function () {
                     if (this.value == -1 && !IsChecked) {
@@ -406,7 +403,7 @@ define([
         },
 
         reset: function () {
-            this.filterContainer.empty();
+            this.getContainer().empty();
             this.filtersValues = null;
             if (this.clientSide != null) {
                 this.initFilters(this.filters);
