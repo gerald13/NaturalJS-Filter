@@ -23,7 +23,7 @@
         var _ = require('underscore');
         var Backbone = require('backbone');
         require('backbone-forms');
-        require('moment');
+        var moment = require('moment');
         var BbForms = Backbone.Form;
         Backbone.$ = $;
 
@@ -112,6 +112,7 @@
         filterContainer: null,
         channel: null,
         clientSide: null,
+        filterFromAJAX:true,
         name: null,
         com: null,
         url: null,
@@ -143,6 +144,7 @@
             if (!options.custom) {
                 if (options.filters) {
                     this.filters = options.filters;
+                    this.filterFromAJAX = false ;
                     if (options.filtersValues) this.initFilters(options.filtersValues);
                     else this.initFilters(options.filters);
                 }
@@ -197,7 +199,7 @@
             for (var key in data) {
                 form = this.initFilter(data[key]);
                 this.getContainer().append(form.el);
-
+                console.log('FilterContrainer',this.getContainer());
                 if (data[key].type == 'Checkboxes') {
                     if (!this.filtersValues || !this.filtersValues[data[key].name]) {
                         this.getContainer().find("input[type='checkbox']").each(function () {
@@ -464,7 +466,7 @@
         },
 
         update: function () {
-            this.filters = [];
+            this.criterias = [];
             var currentForm, value;
             for (var i = 0; i < this.forms.length; i++) {
                 currentForm = this.forms[i];
@@ -474,14 +476,14 @@
                 //if (!Validation && (currentForm.getValue().Value == '0' && currentForm.getValue().Value != null) ) {
                 if (!currentForm.validate() && (currentForm.getValue().Value)) {
                     value = currentForm.getValue();
-                    this.filters.push(value);
+                    this.criterias.push(value);
                     //console.log('Add value ', value, this.filters);
                     currentForm.$el.find('input.filter').addClass('active');
                 } else {
                     currentForm.$el.find('input.filter').removeClass('active')
                 };
             };
-            this.criterias = this.filters;
+            //this.criterias = this.filters;
             //console.log( this.filters);
             //console.log('fILTERS ***********************', this.filters);
             /*            this.interaction('filter', this.filters)
@@ -489,11 +491,11 @@
                             this.clientFilter(this.filters)
                         }*/
             if (this.clientSide != null) {
-                this.clientFilter(this.filters);
+                this.clientFilter(this.criterias);
             } else {
-                this.interaction('filter', this.filters);
+                this.interaction('filter', this.criterias);
             }
-            return this.filters;
+            return this.criterias;
         },
 
         reset: function () {
@@ -503,8 +505,13 @@
                 this.initFilters(this.filters);
             }
             else {
-                // Otherwise initialized from AJAX call
-                this.getFilters();
+                if (this.filterFromAJAX) {
+               // Otherwise initialized from AJAX call
+                    this.getFilters();
+                }
+                else {
+                    this.initFilters(this.filters);
+                }
             }
             this.update();
         },
