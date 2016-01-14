@@ -313,7 +313,7 @@
 
                 //Value: dataRow
                 Value: {
-                    type: this.getFieldType(type),
+                    type: type,
                     title: dataRow['label'],
                     editorClass: editorClass,
                     options: this.getValueOptions(dataRow),
@@ -415,7 +415,7 @@
                 case "Text": case "AutocompTreeEditor": case "AutocompleteEditor":
                     return operatorsOptions = [{ label: 'Equals', val: 'Is' }, { label: 'Does Not Equal', val: 'Is not' }, { label: 'Begins with', val: 'begins' }, { label: 'Does not Begin with', val: 'not begin' }, { label: 'Ends with', val: 'ends' }, { label: 'Does not end with', val: 'not end' }, { label: 'Contains', val: 'Contains' }, { label: 'Does not Contain', val: 'Not Contains' }, { label: 'In', val: 'IN' }, ];
                     break;
-                case "DATETIME":
+                case "DateTimePickerEditor":
                     //return operatorsOptions = [{ label: '<', val: '<' }, { label: '>', val: '>' }, { label: '=', val: '=' }, { label: '<>', val: '<>' }, { label: '<=', val: '<=' }, { label: '>=', val: '>=' }];
                     return operatorsOptions = ['<', '>', '=', '<>', '<=', '>='];
                     break;
@@ -431,7 +431,7 @@
                     break;
             }
         },
-
+        /*
         getFieldType: function (type) {
             var typeField;
             switch (type) {
@@ -464,7 +464,7 @@
                     break;
             }
         },
-
+        */
         update: function () {
             this.criterias = [];
             var currentForm, value;
