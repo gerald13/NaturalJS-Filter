@@ -73,18 +73,19 @@
 
     var tplinterval =
    '<form class="filter form-horizontal filter-form-<%=fieldname%>" style="position:relative">'
-   + '<br><div   style="margin-bottom: 30px;">'
+   + '<div   class="clearfix">'
        + '<span data-editors="Column"></span>'
        + '<span class="col-xs-3"><b><%= filterName %>&nbsp:</b></span>'
        + '<span data-editors="ColumnType"></span>'
        + '<span class="hidden col-xs-4" data-editors="Operator"></span>'
        + '<span class="col-xs-3">From</span><span class="col-xs-6 filterinterval" data-editors="From"></span>'
-       + '<span class="col-xs-3"></span>'
-       + '<span class="col-xs-3">To</span><span class="col-xs-6 filterinterval" data-editors="To"></span>'
+    + '</div>'
+    + '<div class="clearfix">'
+       + '<span class="col-xs-3 col-xs-offset-3">To</span><span class="col-xs-6 filterinterval" data-editors="To"></span>'
    + '</div>'
-   + '<div class="clear"></div>'
    + '</form>'
-   + '<div class="clear"></div>'
+   
+
 
 
     var tplAdded = '<div class="filter clearfix">'
@@ -106,6 +107,31 @@
       + '</div>'
     + '</div>';
 
+
+    Backbone.Form.validators.INNumber = function (options) {
+        return function INNumber(value) {
+
+            console.log('this', this, value,options);
+            if (value == '') return null ;
+            //return null;
+            //var myRegEx = new RegExp('[\d*\s]*\d*$');
+            var myRegEx = new RegExp('^([0-9]+(\.[0-9]+)?[\t|\,|\x20]*)+$');
+            
+            
+            if (myRegEx.test(value)) {
+                return null;
+            }
+            else {
+                var retour = {
+                    type:'required',
+                    message: 'Invalid format for IN clause '
+                };
+
+                return retour;
+            }
+
+        };
+    };
     /*
     
     define([
@@ -287,39 +313,12 @@
             }
         },
 
-        addFilter: function (data) {
-            var _this = this;
-            var form;
-            var index = 0;
-            for (var key in data) {
-                index++;
-                form = this.initFilter(data[key], true);
-                this.getContainer().append(form.el);
 
-                $(form.el).find('select').focus();
-                if (data[key].type == 'Checkboxes') {
-                    this.getContainer().find('input[type="checkbox"]').each(function () {
-                        $(this).prop('checked', true);
-                    });
-                }
-
-                form.$el.find('button#removeFilter').on('click', function () {
-                    _this.getContainer().find(form.el).remove();
-                    var i = _this.forms.indexOf(form);
-                    if (i > -1) {
-                        _this.forms.splice(i, 1);
-                    }
-                    return;
-                });
-
-                this.forms.push(form);
-            };
-        },
 
         initFilter: function (dataRow, added) {
             var form;
             var type = dataRow['type'];
-            
+
             var template = tpl;
             var template = (added) ? tplAdded : tpl;
             var options = this.getValueOptions(dataRow);
@@ -350,17 +349,17 @@
 
             editorClass += ' ' + dataRow['name'];
             if (isInterval) {
-               
-                form = this.getBBFormFromInterval(dataRow, editorClass, type,tplinterval);
+
+                form = this.getBBFormFromInterval(dataRow, editorClass, type, tplinterval);
             }
             else {
-                
-                form = this.getBBFormFromFilter(dataRow, editorClass, type, operators,template);
+
+                form = this.getBBFormFromFilter(dataRow, editorClass, type, operators, template);
             }
 
 
 
-            
+
             /*
             form.$el.find(".dateTimePicker").each(function () {
                 console.log('THGIS', this);
@@ -369,8 +368,8 @@
             //console.log(form.model);
             return form;
         },
-        getBBFormFromFilter: function (dataRow, editorClass, type, operators,template) {
-            
+        getBBFormFromFilter: function (dataRow, editorClass, type, operators, template, indice) {
+            var _this = this;
             var fieldName = dataRow['name'];
             var schm = {
                 Column: { name: 'Column', type: 'Hidden', title: dataRow['label'], value: fieldName },
@@ -394,6 +393,9 @@
             if (this.filtersValues && this.filtersValues[fieldName]) {
                 valeur = this.filtersValues[fieldName].value;
                 operatorValue = this.filtersValues[fieldName].operatorValue;
+                if (this.filtersValues[fieldName].operatorValue == 'IN') {
+                    schm.value = this.initValuesShemaIn(schma.value, this.filtersValues[fieldName].operatorValue);
+                }
             }
             else {
                 operatorValue = schm.Operator.options[0];
@@ -426,13 +428,49 @@
                 data: Formdata,
                 templateData: { filterName: dataRow['title'], ColumnType: type, fieldname: fieldName }
             }).render();
+            form.previousOperator = mod.get('Operator');
+            form.indice = this.forms.length;
+            form.on('Operator:change', function (infos, editor) {
+                var NewOperator = editor.getValue();
+
+                if (this.previousOperator == 'IN' || NewOperator == 'IN') {
+                    // on agit que si on passe de in à autre chose ou autre chose à in, sinon pas d'action
+
+                    console.log(this);
+                    if (NewOperator == 'IN') {
+                        this.schema.Value = _this.initValuesShemaIn(this.schema.Value);
+                    }
+                    else {
+                        this.schema.Value.type = this.model.get('ColumnType');
+                        this.schema.Value.validators.pop();
+                    }
+                    this.model.set('Value', '');
+                    this.model.set('Operator', NewOperator);
+
+                    console.log(this);
+                    //this.model.set('schema', schema);$el = 
+                    form.initialize();
+                    this.render();
+                    console.log(this);
+                    $('#filters >.filter').eq(this.indice).html(this.$el);
+                }
+                /*if (this.indice == 0) {
+                    $('#filters').prepend(this.$el);
+                }
+                else {
+                    $('#filters >.filter').eq(this.indice - 1).after(this.$el.html());
+                }*/
+                this.previousOperator = NewOperator;
+            });
+            console.log(form);
             return form;
 
         },
-        getBBFormFromInterval: function (dataRow, editorClass,type,template) {
-            
+
+        getBBFormFromInterval: function (dataRow, editorClass, type, template) {
+
             var fieldName = dataRow['name'];
-            
+
             var schm = {
                 Column: { name: 'Column', type: 'Hidden', title: dataRow['label'], value: fieldName },
                 ColumnType: { name: 'ColumnType', title: '', type: 'Hidden', value: type },
@@ -508,6 +546,17 @@
         },
         changeInput: function (options) {
         },
+        initValuesShemaIn: function (initialSchema) {
+            var initialType = initialSchema.type;
+            initialSchema.type = 'Text'
+            if (initialSchema.validators == null) {
+                initialSchema.validators = [];
+            }
+            if (initialType == 'Number') {
+                initialSchema.validators.push('INNumber');
+            }
+            return initialSchema;
+        },
 
         clickedCheck: function (e) {
             // Keep the new check value
@@ -574,9 +623,13 @@
                     return operatorsOptions = [{ label: 'Checked', val: 'Checked' }];
                     break;
                     break;
-                default:
-                    return operatorsOptions = ['<', '>', '=', '<>', '<=', '>=', 'IN'];
+                case "Number":
+                    return operatorsOptions = ['=', '<>', '<', '>', '<=', '>=', 'IN'];
                     break;
+                default:
+                    return operatorsOptions = [{ label: 'Equals', val: 'Is' }, { label: 'Does Not Equal', val: 'Is not' }, { label: 'Begins with', val: 'begins' }, { label: 'Does not Begin with', val: 'not begin' }, { label: 'Ends with', val: 'ends' }, { label: 'Does not end with', val: 'not end' }, { label: 'Contains', val: 'Contains' }, { label: 'Does not Contain', val: 'Not Contains' }, { label: 'In', val: 'IN' }, ];
+                    break;
+
             }
         },
 
@@ -646,7 +699,34 @@
             }
             this.update();
         },
+        addFilter: function (data) {
+            var _this = this;
+            var form;
+            var index = 0;
+            for (var key in data) {
+                index++;
+                form = this.initFilter(data[key], true);
+                this.getContainer().append(form.el);
 
+                $(form.el).find('select').focus();
+                if (data[key].type == 'Checkboxes') {
+                    this.getContainer().find('input[type="checkbox"]').each(function () {
+                        $(this).prop('checked', true);
+                    });
+                }
+
+                form.$el.find('button#removeFilter').on('click', function () {
+                    _this.getContainer().find(form.el).remove();
+                    var i = _this.forms.indexOf(form);
+                    if (i > -1) {
+                        _this.forms.splice(i, 1);
+                    }
+                    return;
+                });
+
+                this.forms.push(form);
+            };
+        },
 
         ///////////////////////// FILTRE CLIENT //////////////////////////////
 
