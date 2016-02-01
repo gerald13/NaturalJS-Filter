@@ -234,6 +234,7 @@
 
         initFilters: function (data) {
             var form;
+            var _this = this;
 
             for (var key in data) {
                 form = this.initFilter(data[key]);
@@ -256,6 +257,12 @@
                 this.forms.push(form);
                 this.filterLoaded();
             };
+            $(this.filterContainer).find('input').on('keypress', function(e) {
+                if( e.keyCode == 13  ){
+                    e.preventDefault();
+                    _this.update();
+                }
+            });
             if (this.ToggleFilter) {
                 for (var i = 0; i < this.forms.length; i++) {
 
