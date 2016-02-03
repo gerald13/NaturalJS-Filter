@@ -298,16 +298,21 @@
                     console.log('THGIS', this);
                     $(this).datetimepicker();
                 });*/
-
+                
                 this.forms.push(form);
                 this.filterLoaded();
             };
-            $(this.filterContainer).find('input').on('keypress', function(e) {
-                if( e.keyCode == 13  ){
-                    e.preventDefault();
-                    _this.update();
-                }
-            });
+
+            this.getContainer().keypress(function (e) {                                       
+                    
+                    if (e.which == 13) {
+                        console.log('keypressed') ;
+                        e.preventDefault();
+                        _this.update() ;
+                        //do something   
+                    }
+                });
+
             if (this.ToggleFilter) {
                 for (var i = 0; i < this.forms.length; i++) {
 
@@ -343,6 +348,7 @@
 
         initFilter: function (dataRow, added) {
             var form;
+            var _this = this ;
             var type = dataRow['type'];
 
             var template = tpl;
@@ -382,10 +388,6 @@
 
                 form = this.getBBFormFromFilter(dataRow, editorClass, type, operators, template);
             }
-
-
-
-
             /*
             form.$el.find(".dateTimePicker").each(function () {
                 console.log('THGIS', this);
