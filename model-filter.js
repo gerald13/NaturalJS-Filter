@@ -107,6 +107,25 @@
       + '</div>'
     + '</div>';
 
+    var tplAddedInterval = '<div class="filter clearfix">'
+     + '<div class="clearfix">'
+       + '<div class="legend">'
+        + '<label class="col-xs-12"><%= filterName %>:</label>'
+         + '<span data-editors="Column"></span>'
+         + '<span data-editors="ColumnType"></span>'
+       + '</div>'
+       + '<div class="col-xs-12">'
+         + '<span class="col-xs-4 no-padding" data-editors="Operator"></span>'
+         + '<span class="col-xs-6 no-padding-left" data-editors="Value"></span>'
+         + '<span class="pull-right">'
+           + '<button class="btn btn-warning" id="removeFilter">'
+             + '<span class="reneco reneco-close"></span>'
+           + '</button>'
+         + '</span>'
+       + '</div>'
+     + '</div>'
+   + '</div>';
+
 
     Backbone.Form.validators.INNumber = function (options) {
         return function INNumber(value) {
@@ -889,11 +908,11 @@
 
         },
 
-        interaction: function (action, id) {
+        interaction: function (action, params) {
             if (this.com) {
-                this.com.action(action, id);
+                this.com.action(action, params);
             } else {
-                this.action(action, id);
+                this.action(action, params);
             }
         },
 
