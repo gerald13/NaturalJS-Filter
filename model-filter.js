@@ -2,7 +2,7 @@
 
     // Set up Backbone appropriately for the environment. Start with AMD.
     if (typeof define === 'function' && define.amd) {
-        console.log('amd');
+        //console.log('amd');
         define(['jquery',
     'underscore',
     'backbone',
@@ -44,8 +44,8 @@
 }(this, function (root, NsFilter, $, _, Backbone, BbForms, moment) {
 
     var tpl = '<form class="filter form-horizontal filter-form-<%=fieldname%>">'
-        + '<div   class="filterdiv" >'
-    + '<br><span data-editors="Column"></span>'
+        + '<div   class="filterdiv clearfix" >'
+    + '<span data-editors="Column"></span>'
         + '<span class="col-xs-3"><b><%= filterName %>&nbsp:</b></span>'
        + '<span data-editors="ColumnType"></span>'
 
@@ -59,7 +59,7 @@
 
     var tplcheck =
     '<form class="filter form-horizontal filter-form-<%=fieldname%>" style="position:relative">'
-    + '<br><div   style="margin-bottom: 30px;">'
+    + '<div class="clearfix"  >'
         + '<span data-editors="Column"></span>'
         + '<span class="col-xs-3"><b><%= filterName %>&nbsp:</b></span>'
         + '<span data-editors="ColumnType"></span>'
@@ -130,7 +130,7 @@
     Backbone.Form.validators.INNumber = function (options) {
         return function INNumber(value) {
 
-            console.log('this', this, value,options);
+            //console.log('this', this, value,options);
             if (value == '') return null ;
             //return null;
             //var myRegEx = new RegExp('[\d*\s]*\d*$');
@@ -306,7 +306,7 @@
             this.getContainer().keypress(function (e) {                                       
                     
                     if (e.which == 13) {
-                        console.log('keypressed') ;
+                        //console.log('keypressed') ;
                         e.preventDefault();
                         _this.update() ;
                         //do something   
@@ -366,7 +366,9 @@
             var editorClass = (dataRow['editorClass'] || '') + ' form-control filter';
 
             if (type == 'Select' || type == 'Checkboxes' || type == 'AutocompTreeEditor') {
-                editorClass += ' list-inline ';
+                if (type == 'Checkboxes') {
+                    editorClass += ' list-inline ';
+                }
                 options = dataRow['options'];
 
                 if (type == 'Checkboxes') {
@@ -464,7 +466,7 @@
                 if (this.previousOperator == 'IN' || NewOperator == 'IN') {
                     // on agit que si on passe de in à autre chose ou autre chose à in, sinon pas d'action
 
-                    console.log(this);
+                    //console.log(this);
                     if (NewOperator == 'IN') {
                         this.schema.Value = _this.initValuesShemaIn(this.schema.Value);
                     }
@@ -475,7 +477,7 @@
                     this.model.set('Value', '');
                     this.model.set('Operator', NewOperator);
 
-                    console.log(this);
+                    //console.log(this);
                     //this.model.set('schema', schema);$el = 
                     form.initialize();
                     this.render();
@@ -491,7 +493,7 @@
                 }*/
                 this.previousOperator = NewOperator;
             });
-            console.log(form);
+            //console.log(form);
             return form;
 
         },
@@ -639,7 +641,7 @@
             var operatorsOptions;
             switch (type) {
                 case "Text": case "AutocompTreeEditor": case "AutocompleteEditor":
-                    return operatorsOptions = [{ label: 'Equals', val: 'Is' }, { label: 'Does Not Equal', val: 'Is not' }, { label: 'Begins with', val: 'begins' }, { label: 'Does not Begin with', val: 'not begin' }, { label: 'Ends with', val: 'ends' }, { label: 'Does not end with', val: 'not end' }, { label: 'Contains', val: 'Contains' }, { label: 'Does not Contain', val: 'Not Contains' }, { label: 'In', val: 'IN' }, ];
+                    return operatorsOptions = [{ label: 'Equals', val: 'Is' }, { label: 'Not equal', val: 'Is not' }, { label: 'Begins with', val: 'begins' }, { label: 'Not begin with', val: 'not begin' }, { label: 'Ends with', val: 'ends' }, { label: 'Not end with', val: 'not end' }, { label: 'Contains', val: 'Contains' }, { label: 'Not contain', val: 'Not Contains' }, { label: 'In', val: 'IN' }, ];
                     break;
                 case "DateTimePickerEditor":
                     //return operatorsOptions = [{ label: '<', val: '<' }, { label: '>', val: '>' }, { label: '=', val: '=' }, { label: '<>', val: '<>' }, { label: '<=', val: '<=' }, { label: '>=', val: '>=' }];
